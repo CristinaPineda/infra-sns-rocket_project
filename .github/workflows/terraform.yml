@@ -97,4 +97,4 @@ jobs:
           terraform workspace select -or-create ${{ inputs.environment }} && \
           terraform apply -auto-approve \ 
             -lock=false \
-            "${{ inputs.environment }}.plan"
+            "$./{{ inputs.environment }}.plan"
