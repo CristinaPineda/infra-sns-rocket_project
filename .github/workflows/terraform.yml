@@ -71,6 +71,9 @@ jobs:
             -auto-approve \
             -lock=false
 
+      - name: Debug - Listar arquivos na pasta infra
+        run: ls -R infra       
+
       - name: Terraform Plan
         if: steps.read-destroy-config.outputs.destroy != 'true'
         id: terraform-plan
