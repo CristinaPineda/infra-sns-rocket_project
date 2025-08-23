@@ -45,3 +45,4 @@ jobs:
           terraform import aws_cloudwatch_log_group.sns_delivery_logs "/aws/sns/deliveries/rocket-project-dev-sns-topic" && \
           # Importa o IAM Role
           terraform import aws_iam_role.sns_logging_role "rocket-project-dev-sns-logging-role"
+          
