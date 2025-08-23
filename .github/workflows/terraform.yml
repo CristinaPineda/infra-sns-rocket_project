@@ -67,7 +67,7 @@ jobs:
           terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} && \
           terraform destroy \
             -var="environment=${{ inputs.environment }}" \
-            -var-file="infra/envs/${{ inputs.environment }}/terraform.tfvars" \
+            -var-file="envs/${{ inputs.environment }}/terraform.tfvars" \
             -auto-approve \
             -lock=false
 
@@ -79,7 +79,7 @@ jobs:
           terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} && \
           terraform plan \
             -var="environment=${{ inputs.environment }}" \
-            -var-file="infra/envs/${{ inputs.environment }}/terraform.tfvars" \
+            -var-file="envs/${{ inputs.environment }}/terraform.tfvars" \
             -out="${{ inputs.environment }}.plan" \
             -lock=false
 
