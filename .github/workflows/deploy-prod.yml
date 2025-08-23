@@ -1,0 +1,34 @@
+name: Deploy de Produção (Infraestrutura)
+
+on:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Credenciais AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: sa-east-1
+          role-to-assume: arn:aws:iam::063630845645:role/github-actions-pipeline-infra
+
+      - name: Configurar Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Iniciar Terraform
+        run: terraform init
+
+      - name: Validar e Aplicar mudanças de Infra
+        run: terraform apply -auto-approve -var-file="infra/envs/prod/terraform.tfvars"

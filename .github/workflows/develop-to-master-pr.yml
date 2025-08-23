@@ -3,7 +3,7 @@ name: Auto PR de Develop para Master
 on:
   push:
     branches:
-      - develop
+      - 'develop'
 
 jobs:
   create-pr:
@@ -14,31 +14,31 @@ jobs:
     steps:
       - name: Checkout do código
         uses: actions/checkout@v4
-      
-      - name: Criar Pull Request
+
+      - name: Criar Pull Request para Master
         id: create-pr
         uses: actions/github-script@v6
         with:
           script: |
             const { owner, repo } = context.repo;
-            const branchName = 'develop';
             const pullRequests = await github.rest.pulls.list({
               owner,
               repo,
-              head: branchName,
+              head: 'develop',
               base: 'master',
+              state: 'open'
             });
-            
+
             if (pullRequests.data.length === 0) {
               const newPullRequest = await github.rest.pulls.create({
                 owner,
                 repo,
-                head: branchName,
+                head: 'develop',
                 base: 'master',
-                title: 'chore: Mesclar alterações da Develop para Master',
-                body: 'Este Pull Request foi criado automaticamente. Por favor, revise as alterações antes de mesclar para produção.',
+                title: 'chore: Integrar mudanças da branch develop',
+                body: 'Este Pull Request foi criado automaticamente para integrar as mudanças de develop para master.'
               });
-              console.log(`Pull Request criado: ${newPullRequest.data.html_url}`);
+              console.log(`Pull Request para master criado: ${newPullRequest.data.html_url}`);
             } else {
-              console.log('Já existe um Pull Request para esta branch. Nenhum novo foi criado.');
+              console.log('Já existe um Pull Request aberto de develop para master. Nenhum novo foi criado.');
             }
