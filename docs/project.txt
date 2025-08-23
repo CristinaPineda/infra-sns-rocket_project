@@ -1,0 +1,10 @@
+graph TD
+    A[Publicador de Mensagem] --> B(Tópico SNS);
+    B -- Envia Mensagem --> C(Fila SQS);
+    C -- Notifica --> D(Função Lambda);
+    D -- 1. Ler ID da Mensagem --> F(Bucket S3);
+    F -- 2. Verificar se ID já Existe? --> D;
+    D -- 3. Se Não Existir, Armazenar ID --> F;
+    D -- 4. Iniciar Job --> E(AWS Glue Job);
+
+
