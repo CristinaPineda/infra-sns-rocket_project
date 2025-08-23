@@ -94,7 +94,7 @@ jobs:
         id: terraform-apply
         run: |
           cd infra && \
-          terraform workspace select -or-create ${{ inputs.environment }} && \
-          terraform apply -auto-approve \ 
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} && \
+          terraform apply \
             -lock=false \
-            "$./{{ inputs.environment }}.plan"
+            "${{ inputs.environment }}.plan"
