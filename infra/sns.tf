@@ -63,10 +63,3 @@ resource "aws_iam_role_policy" "sns_logging_policy" {
     ]
   })
 }
-
-# 3. Adiciona permissões ao CloudWatch para o SNS assumir a role
-# Este é o método mais recente para configurar as permissões
-resource "aws_iam_role_policy_attachment" "sns_logging_attachment" {
-  role       = aws_iam_role.sns_logging_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonSNSLogsDelivery"
-}
