@@ -63,10 +63,10 @@ jobs:
             -backend-config="dynamodb_table=${{ inputs.aws-lock-dynamodb-table }}"
 
       - name: Terraform Validate
-        run: cd infra && terraform validate # Adicionado 'cd infra'
+        run: cd infra && terraform validate
 
       - name: Terraform Destroy
-        if: inputs.destroy == true # Usando o input direto
+        if: inputs.destroy == true
         id: terraform-destroy
         run: |
           cd infra && \
@@ -78,7 +78,7 @@ jobs:
             -lock=false
 
       - name: Terraform Plan
-        if: inputs.destroy == false # Usando o input direto
+        if: inputs.destroy == false
         id: terraform-plan
         run: |
           cd infra && \
@@ -90,7 +90,7 @@ jobs:
             -lock=false
 
       - name: Terraform Apply
-        if: inputs.destroy == false # Usando o input direto
+        if: inputs.destroy == false
         id: terraform-apply
         run: |
           cd infra && \
