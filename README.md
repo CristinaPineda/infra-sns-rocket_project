@@ -1,138 +1,57 @@
-template-terraform-pipeline-infra
-Este repositório contém um template genérico de GitHub Actions para automatizar a implantação e gerenciamento de recursos AWS usando Terraform. Ele foi projetado para ser reutilizável e flexível, permitindo que você gerencie a infraestrutura de múltiplos serviços ou módulos Terraform a partir de um único fluxo de trabalho centralizado.
+# Projeto Rocket: Arquitetura de Processamento de Dados Assíncrono na AWS
 
-🚀 Visão Geral e Benefícios
-O objetivo principal deste template é padronizar e simplificar seus pipelines de infraestrutura como código (IaC) no AWS.
+---
 
-Principais Benefícios:
-Reutilização de Código: Mantenha a lógica do pipeline em um único local (terraform-generic.yml) e reutilize-a para todos os seus serviços.
+### **Introdução**
 
-Consistência: Garanta que todos os seus deployments de infraestrutura sigam o mesmo processo, reduzindo erros e inconsistências.
+O **Projeto Rocket** é uma arquitetura de referência para a criação de um pipeline de processamento de dados assíncrono e robusto, utilizando serviços gerenciados da AWS. O principal objetivo é garantir um fluxo de trabalho eficiente, escalável e resiliente, onde a integridade dos dados e a idempotência dos processos são asseguradas desde a origem da mensagem até a execução final do job de ETL.
 
-Flexibilidade: Suporta a implantação de múltiplos serviços com estruturas de diretório Terraform independentes dentro do mesmo repositório.
+### **Conceitos Chave da Arquitetura**
 
-Gerenciamento de State Centralizado: Utiliza S3 para o backend do state do Terraform e DynamoDB para gerenciamento de locks, garantindo operações seguras em ambientes colaborativos.
+* **Desacoplamento:** Os serviços são independentes, permitindo que falhas em um componente não afetem o fluxo de trabalho como um todo.
+* **Idempotência:** Um mecanismo para garantir que uma operação possa ser executada múltiplas vezes sem causar efeitos colaterais indesejados. No Projeto Rocket, isso previne que o mesmo job de ETL seja acionado mais de uma vez.
+* **Infraestrutura como Código (IaC):** A infraestrutura é gerenciada e provisionada via código, usando ferramentas de CI/CD como o GitHub Actions para garantir consistência e rastreabilidade nas implantações.
+* **Observabilidade:** O sistema é totalmente monitorado, com logs e métricas centralizados, permitindo a identificação rápida de problemas e a análise do desempenho.
 
-Controle Granular: Permite acionar plan, apply ou destroy através de inputs configuráveis.
+### **Arquitetura e Fluxo de Dados**
 
-Integração AWS OIDC: Autentica com a AWS usando OpenID Connect (OIDC), eliminando a necessidade de credenciais de longa duração no GitHub.
+A arquitetura do Projeto Rocket é composta por uma sequência de serviços AWS que orquestram o fluxo de processamento:
 
-📋 Pré-requisitos
-Para utilizar este template, você precisará:
+1.  **Publicação da Mensagem (Amazon SNS):** O fluxo começa com um produtor de dados (aplicação, serviço ou automação) que publica uma mensagem em um **Tópico SNS**. Isso serve como o ponto de entrada da arquitetura, desacoplando o produtor do consumidor da mensagem.
 
-Repositório GitHub: Onde seus arquivos Terraform e workflows de GitHub Actions serão armazenados.
+2.  **Enfileiramento da Mensagem (Amazon SQS):** O **Tópico SNS** envia automaticamente a mensagem para uma **Fila SQS**. A fila atua como um buffer, garantindo que a mensagem não seja perdida caso o serviço de processamento (AWS Lambda) esteja ocupado ou indisponível.
 
-Conta AWS: Com as permissões necessárias para criar e gerenciar os recursos.
+3.  **Processamento e Validação (AWS Lambda e S3):** Uma **Função Lambda** é acionada sempre que uma nova mensagem chega à fila SQS. A lógica da função é a seguinte:
+    * Ela lê a mensagem e extrai um **ID de transação único**.
+    * Antes de qualquer ação, a Lambda verifica a **integridade dos processos** consultando um **bucket S3** dedicado.
+    * Se o ID já tiver sido processado (indicado pela presença de um objeto com esse ID no bucket S3), a função encerra a execução, garantindo a **idempotência**.
+    * Se o ID for novo, a Lambda armazena-o no S3 para marcar o evento como processado.
 
-Configuração AWS OIDC: Configure a confiança OIDC entre seu repositório GitHub e uma Role IAM na AWS. Esta Role deve ter permissões para assumir as Roles específicas de cada ambiente (aws-assume-role-arn).
+4.  **Início do Job de ETL (AWS Glue):** Após a validação de idempotência, a **Função Lambda** aciona a API do **AWS Glue** para iniciar um job de ETL, passando os parâmetros necessários extraídos da mensagem SQS. O **Job Glue** executa a lógica de transformação dos dados, como leitura de arquivos, processamento e gravação em um destino final.
 
-Role IAM para GitHub Actions: Uma Role (ex: github-actions-pipeline-infra) que as GitHub Actions possam assumir, concedendo permissões para assumir as roles de deployment por ambiente.
+### **Fluxo de Implementação (CI/CD)**
 
-Bucket S3 para State Files: Um bucket S3 (ex: cidade-refugio-statefiles) para armazenar os arquivos de estado do Terraform.
+A implantação do Projeto Rocket é totalmente automatizada, utilizando o **GitHub Actions** como ferramenta de CI/CD.
 
-Tabela DynamoDB para Locks: Uma tabela DynamoDB (ex: cidade-refugio-terraform-lock) para gerenciamento de locks do Terraform.
+* **Infraestrutura como Código (IaC):** Todos os serviços AWS são definidos em um template de código (ex: **AWS CloudFormation**).
+* **Automação do Deploy:** Um workflow no GitHub Actions é acionado em cada `push` para o repositório. O workflow se conecta de forma segura à AWS, lê o template IaC e provisiona ou atualiza a infraestrutura, garantindo que o ambiente seja sempre consistente.
 
-🛠️ Configuração do Template
-Crie o Diretório de Workflows: Se ainda não existir, crie o diretório .github/workflows/ na raiz do seu repositório.
+### **Componentes e Ferramentas**
 
-Adicione o Arquivo do Template: Dentro de .github/workflows/, crie um arquivo chamado terraform-generic.yml e cole o conteúdo do template genérico (conforme fornecido anteriormente).
+| Categoria | Serviço/Ferramenta | Função no Projeto |
+| :--- | :--- | :--- |
+| **AWS Services** | **SNS** | Publicação de mensagens assíncronas. |
+| | **SQS** | Fila de mensagens para desacoplamento. |
+| | **Lambda** | Lógica de negócios e validação de idempotência. |
+| | **S3** | Armazenamento de IDs para idempotência e dados de processamento. |
+| | **Glue** | Execução de jobs de ETL de forma serverless. |
+| | **CloudWatch** | Monitoramento, métricas e centralização de logs. |
+| **DevOps** | **GitHub Actions** | Automação do pipeline de CI/CD. |
+| | **CloudFormation** | Definição da infraestrutura como código (IaC). |
 
-# .github/workflows/terraform-generic.yml
-name: "Terraform Generic Workflow"
-on:
-  workflow_call:
-    inputs:
-      environment: { type: string, required: true, description: "..." }
-      aws-assume-role-arn: { type: string, required: true, description: "..." }
-      aws-region: { type: string, required: true, description: "..." }
-      aws-statefile-s3-bucket: { type: string, required: true, description: "..." }
-      aws-lock-dynamodb-table: { type: string, required: true, description: "..." }
-      service-name: { type: string, required: true, description: "..." }
-      terraform-dir: { type: string, required: true, description: "..." }
-      destroy: { type: boolean, required: false, default: false, description: "..." }
-# ... (restante do código do template)
+### **Benefícios do Projeto**
 
-🚀 Como Usar este Template Genérico
-Para implantar um serviço AWS usando este template, você precisará criar um novo arquivo de workflow que "chama" o terraform-generic.yml e passa os parâmetros específicos para o seu serviço e ambiente.
-
-Exemplo: Deployment de Desenvolvimento para "My Web App"
-Crie um arquivo como .github/workflows/dev-deploy-my-web-app.yml e adicione o seguinte conteúdo:
-
-# .github/workflows/dev-deploy-my-web-app.yml
-name: "DEV Deploy My Web App"
-
-on:
-  push:
-    branches:
-      - develop # Acionado em pushes para a branch 'develop'
-    paths:
-      # Opcional: Só executa se houver mudanças no diretório específico do Terraform deste serviço
-      - 'terraform/my-web-app/**' 
-
-permissions:
-  id-token: write
-  contents: read
-
-jobs:
-  deploy:
-    uses: ./.github/workflows/terraform-generic.yml # Caminho para o seu workflow genérico
-    with:
-      environment: dev # Ambiente alvo: 'dev'
-      aws-assume-role-arn: "arn:aws:iam::063630845645:role/github-actions-pipeline-infra" # Role para assumir no GitHub Actions
-      aws-region: "sa-east-1" # Região AWS
-      aws-statefile-s3-bucket: "cidade-refugio-statefiles" # Bucket S3 para state files
-      aws-lock-dynamodb-table: "cidade-refugio-terraform-lock" # Tabela DynamoDB para locks
-      service-name: "my-web-app" # Nome único do serviço (usado para o path do state file: my-web-app/dev/terraform.tfstate)
-      terraform-dir: "terraform/my-web-app" # Caminho do diretório que contém os arquivos .tf do serviço
-      destroy: false # Define que este workflow fará um 'plan' e 'apply' (false), não um 'destroy'
-
-Explicação dos Inputs:
-environment: O nome do ambiente alvo (ex: dev, homolog, prod). Usado para o workspace do Terraform e para carregar as tfvars do ambiente.
-
-aws-assume-role-arn: O ARN da Role IAM que o GitHub Actions assumirá para se autenticar com a AWS.
-
-aws-region: A região AWS onde os recursos serão implantados.
-
-aws-statefile-s3-bucket: O nome do bucket S3 que armazenará os arquivos de estado do Terraform.
-
-aws-lock-dynamodb-table: O nome da tabela DynamoDB usada para gerenciar o bloqueio de estado do Terraform.
-
-service-name: Um nome único para o serviço ou módulo Terraform que está sendo implantado. Este nome é crucial para criar um caminho de state file exclusivo no S3 (<service-name>/<environment>/terraform.tfstate), evitando conflitos entre diferentes serviços.
-
-terraform-dir: O caminho relativo do repositório para o diretório que contém os arquivos .tf do Terraform para este serviço específico.
-
-destroy: Um valor booleano (true ou false). Se true, o workflow executará terraform destroy. Se false (padrão), ele fará terraform plan e terraform apply.
-
-📁 Estrutura Recomendada do Projeto Terraform
-Para aproveitar ao máximo este template, sugerimos a seguinte estrutura de diretórios para seus arquivos Terraform:
-
-.
-├── .github/
-│   └── workflows/
-│       ├── terraform-generic.yml            # O template genérico do pipeline
-│       ├── dev-deploy-my-web-app.yml      # Exemplo de chamada para 'my-web-app' em 'dev'
-│       └── prod-deploy-another-service.yml  # Exemplo de chamada para outro serviço em 'prod'
-└── terraform/
-    ├── my-web-app/                       # Diretório Terraform para o serviço "my-web-app"
-    │   ├── main.tf
-    │   ├── variables.tf
-    │   └── envs/                         # Variáveis específicas de ambiente para este serviço
-    │       ├── dev/
-    │       │   └── terraform.tfvars
-    │       └── prod/
-    │           └── terraform.tfvars
-    └── another-service/                  # Diretório Terraform para "another-service"
-        ├── main.tf
-        ├── variables.tf
-        └── envs/
-            ├── dev/
-            │   └── terraform.tfvars
-            └── prod/
-                └── terraform.tfvars
-
-⚠️ Observações Importantes
-terraform.tfvars: Certifique-se de que cada diretório de serviço (terraform/<service-name>/envs/<environment>/) contenha um arquivo terraform.tfvars com as variáveis específicas para aquele ambiente.
-
-Permissões: As permissões da Role IAM configurada via OIDC (aws-assume-role-arn) são críticas. Certifique-se de que ela tenha acesso para assumir as roles de deployment e para gerenciar os recursos S3 e DynamoDB do backend.
-
-Segurança: Sempre revise os terraform plan gerados antes de permitir um terraform apply em ambientes de produção. O auto-approve no destroy deve ser usado com extrema cautela.
+* **Escalabilidade e Resiliência:** A arquitetura se adapta automaticamente à carga de trabalho e é resiliente a falhas.
+* **Redução de Custo:** Pagamento por uso (serverless), sem a necessidade de manter servidores em operação constante.
+* **Confiabilidade:** A idempotência e o desacoplamento garantem a integridade dos dados e a consistência do processamento.
+* **Manutenibilidade:** A gestão da infraestrutura via código simplifica as atualizações e a manutenção do ambiente.
