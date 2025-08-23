@@ -6,6 +6,9 @@ on:
       environment:
         type: string
         required: true
+      project_name:
+        type: string
+        required: true
       aws-assume-role-arn:
         type: string
         required: true
@@ -18,6 +21,11 @@ on:
       aws-lock-dynamodb-table:
         type: string
         required: true
+      destroy:
+        type: boolean
+        required: false
+        default: false
+        description: "Define se o comando 'terraform destroy' deve ser executado (true para destruir, false para plan/apply)"
 
 jobs:
   terraform:
@@ -25,6 +33,9 @@ jobs:
     defaults:
       run:
         shell: bash
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - name: Checkout code
@@ -42,44 +53,36 @@ jobs:
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: ${{ inputs.aws-region }}
 
-      - name: Read destroy configuration
-        id: read-destroy-config
-        run: |
-          DESTROY="$(jq -r '.${{ inputs.environment }}' ./infra/destroy_config.json)"
-          echo "destroy=$(echo $DESTROY)" >> $GITHUB_OUTPUT
-
       - name: Terraform Init
         run: |
-          cd infra && terraform init \
+          cd infra && \
+          terraform init \
             -backend-config="bucket=${{ inputs.aws-statefile-s3-bucket }}" \
-            -backend-config="key=${{ github.event.repository.name }}" \
+            -backend-config="key=${{ inputs.project_name }}/${{ inputs.environment }}/terraform.tfstate" \
             -backend-config="region=${{ inputs.aws-region }}" \
             -backend-config="dynamodb_table=${{ inputs.aws-lock-dynamodb-table }}"
 
       - name: Terraform Validate
-        run: terraform validate
+        run: cd infra && terraform validate
 
       - name: Terraform Destroy
-        if: steps.read-destroy-config.outputs.destroy == 'true'
+        if: inputs.destroy == true
         id: terraform-destroy
         run: |
           cd infra && \
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} && \
+          terraform workspace select -or-create ${{ inputs.environment }} && \ 
           terraform destroy \
             -var="environment=${{ inputs.environment }}" \
-            -var-file="envs/${{ inputs.environment }}/terraform.tfvars" \
+            -var-file="envs/${{ inputs.environment }}/terraform.tfvars" \ 
             -auto-approve \
             -lock=false
 
-      - name: Debug - Listar arquivos na pasta infra
-        run: ls -R infra       
-
       - name: Terraform Plan
-        if: steps.read-destroy-config.outputs.destroy != 'true'
+        if: inputs.destroy == false
         id: terraform-plan
         run: |
           cd infra && \
-          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} && \
+          terraform workspace select -or-create ${{ inputs.environment }} && \
           terraform plan \
             -var="environment=${{ inputs.environment }}" \
             -var-file="envs/${{ inputs.environment }}/terraform.tfvars" \
@@ -87,7 +90,7 @@ jobs:
             -lock=false
 
       - name: Terraform Apply
-        if: steps.read-destroy-config.outputs.destroy != 'true'
+        if: inputs.destroy == false
         id: terraform-apply
         run: |
           cd infra && \

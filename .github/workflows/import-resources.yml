@@ -1,0 +1,48 @@
+name: "Terraform Import"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: "arn:aws:iam::063630845645:role/github-actions-pipeline-infra"
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: "sa-east-1"
+
+      - name: Terraform Init
+        run: |
+          cd infra && \
+          terraform init \
+            -backend-config="bucket=rocket-project-statefiles" \
+            -backend-config="key=rocket_project/dev/terraform.tfstate" \
+            -backend-config="region=sa-east-1" \
+            -backend-config="dynamodb_table=rocket-project-terraform-lock"
+
+      - name: Terraform Import
+        run: |
+          cd infra && \
+          # Importa o CloudWatch Log Group
+          terraform import aws_cloudwatch_log_group.sns_delivery_logs "/aws/sns/deliveries/rocket-project-dev-sns-topic" && \
+          # Importa o IAM Role
+          terraform import aws_iam_role.sns_logging_role "rocket-project-dev-sns-logging-role"
+          
