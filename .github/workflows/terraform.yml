@@ -85,7 +85,7 @@ jobs:
           terraform destroy \
             -var="environment=${{ inputs.environment }}" \
             # Assume que o .tfvars está dentro de 'envs/<environment>/terraform.tfvars' relativo ao terraform-dir
-            -var-file="./infra/envs/${{ inputs.environment }}/terraform.tfvars" \
+            -var-file="infra/envs/${{ inputs.environment }}/terraform.tfvars" \
             -auto-approve \
             -lock=false
 
@@ -98,7 +98,7 @@ jobs:
           terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} && \
           terraform plan \
             -var="environment=${{ inputs.environment }}" \
-            -var-file="./infra/envs/${{ inputs.environment }}/terraform.tfvars" \
+            -var-file="infra/envs/${{ inputs.environment }}/terraform.tfvars" \
             -out="${{ inputs.environment }}.plan" \
             -lock=false
 
