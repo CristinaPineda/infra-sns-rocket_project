@@ -6,7 +6,7 @@ on:
       environment:
         type: string
         required: true
-      project_name: # Mantido, mas note a discussão abaixo sobre service-name vs. project_name para o backend key
+      project_name:
         type: string
         required: true
       aws-assume-role-arn:
@@ -21,7 +21,7 @@ on:
       aws-lock-dynamodb-table:
         type: string
         required: true
-      destroy: # Adicionado 'destroy' input do workflow original
+      destroy:
         type: boolean
         required: false
         default: false
@@ -33,7 +33,7 @@ jobs:
     defaults:
       run:
         shell: bash
-    permissions: # Adicionado permissões para OIDC
+    permissions:
       id-token: write
       contents: read
 
@@ -53,10 +53,6 @@ jobs:
           role-session-name: GitHub_to_AWS_via_FederatedOIDC
           aws-region: ${{ inputs.aws-region }}
 
-      # O passo de "Read destroy configuration" foi removido.
-      # O input 'destroy' já é passado diretamente.
-      # Se você precisa que isso seja lido de um arquivo, ajuste o input 'destroy' no workflow chamador.
-
       - name: Terraform Init
         run: |
           cd infra && \
@@ -74,25 +70,22 @@ jobs:
         id: terraform-destroy
         run: |
           cd infra && \
-          terraform workspace select -or-create ${{ inputs.environment }} && \ # Ajustado para -or-create
+          terraform workspace select -or-create ${{ inputs.environment }} && \ 
           terraform destroy \
             -var="environment=${{ inputs.environment }}" \
-            -var-file="envs/${{ inputs.environment }}/terraform.tfvars" \ # Caminho relativo a 'infra'
+            -var-file="envs/${{ inputs.environment }}/terraform.tfvars" \ 
             -auto-approve \
             -lock=false
-
-      # Os passos "Debug - Listar arquivos na pasta infra", "Importar CloudWatch Log Group" e "Importar IAM Role" foram removidos.
-      # Eles não devem fazer parte de um pipeline de CI/CD automatizado.
 
       - name: Terraform Plan
         if: inputs.destroy == false # Usando o input direto
         id: terraform-plan
         run: |
           cd infra && \
-          terraform workspace select -or-create ${{ inputs.environment }} && \ # Ajustado para -or-create
+          terraform workspace select -or-create ${{ inputs.environment }} && \
           terraform plan \
             -var="environment=${{ inputs.environment }}" \
-            -var-file="envs/${{ inputs.environment }}/terraform.tfvars" \ # Caminho relativo a 'infra'
+            -var-file="envs/${{ inputs.environment }}/terraform.tfvars" \ 
             -out="${{ inputs.environment }}.plan" \
             -lock=false
 
@@ -101,7 +94,7 @@ jobs:
         id: terraform-apply
         run: |
           cd infra && \
-          terraform workspace select -or-create ${{ inputs.environment }} && \ # Ajustado para -or-create
+          terraform workspace select -or-create ${{ inputs.environment }} && \ 
           terraform apply \
             -lock=false \
             "${{ inputs.environment }}.plan"
