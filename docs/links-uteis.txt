@@ -1,0 +1,7 @@
+ Artigo - Conexão Github Actions com AWS: 
+ https://aws.amazon.com/pt/blogs/security/use-iam-roles-to-connect-github-actions-to-actions-in-aws/
+
+ Video de configuração pipeline:
+ https://www.youtube.com/watch?v=1TNAUW7_bC0
+
+ 

@@ -1,0 +1,114 @@
+name: "Terraform Generic Workflow" # Nome do fluxo de trabalho genérico
+
+on:
+  workflow_call: # Este workflow pode ser chamado por outros workflows
+    inputs:
+      environment:
+        type: string
+        required: true
+        description: "Ambiente de deployment (ex: dev, prod, homolog)"
+      aws-assume-role-arn:
+        type: string
+        required: true
+        description: "ARN da role AWS a ser assumida para as credenciais OIDC"
+      aws-region:
+        type: string
+        required: true
+        description: "Região AWS para o deployment dos recursos"
+      aws-statefile-s3-bucket:
+        type: string
+        required: true
+        description: "Nome do bucket S3 para armazenar os state files do Terraform"
+      aws-lock-dynamodb-table:
+        type: string
+        required: true
+        description: "Nome da tabela DynamoDB para gerenciamento de locks do Terraform"
+      service-name: # NOVO INPUT: Nome único para o serviço que está sendo implantado
+        type: string
+        required: true
+        description: "Nome único do serviço/módulo Terraform a ser implantado (ex: my-web-app, data-pipeline)"
+      terraform-dir: # NOVO INPUT: Caminho do diretório com o código Terraform do serviço
+        type: string
+        required: true
+        description: "Caminho do diretório que contém os arquivos .tf do Terraform para este serviço (ex: terraform/my-service)"
+      destroy: # NOVO INPUT: Booleano para ativar ou desativar o 'destroy'
+        type: boolean
+        required: false
+        default: false
+        description: "Define se o comando 'terraform destroy' deve ser executado (true para destruir, false para plan/apply)"
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.aws-assume-role-arn }}
+          role-session-name: GitHub_to_AWS_via_FederatedOIDC
+          aws-region: ${{ inputs.aws-region }}
+
+      - name: Terraform Init
+        run: |
+          # Navega para o diretório específico do Terraform do serviço
+          cd ${{ inputs.terraform-dir }} && \
+          terraform init \
+            -backend-config="bucket=${{ inputs.aws-statefile-s3-bucket }}" \
+            # O key agora inclui service-name e environment para unicidade do state file
+            -backend-config="key=${{ inputs.service-name }}/${{ inputs.environment }}/terraform.tfstate" \
+            -backend-config="region=${{ inputs.aws-region }}" \
+            -backend-config="dynamodb_table=${{ inputs.aws-lock-dynamodb-table }}"
+
+      - name: Terraform Validate
+        run: cd ${{ inputs.terraform-dir }} && terraform validate
+
+      - name: Terraform Destroy
+        # Executa apenas se o input 'destroy' for 'true'
+        if: inputs.destroy == true
+        id: terraform-destroy
+        run: |
+          cd ${{ inputs.terraform-dir }} && \
+          # Seleciona ou cria o workspace com base no ambiente
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} && \
+          terraform destroy \
+            -var="environment=${{ inputs.environment }}" \
+            # Assume que o .tfvars está dentro de 'envs/<environment>/terraform.tfvars' relativo ao terraform-dir
+            -var-file="./envs/${{ inputs.environment }}/terraform.tfvars" \
+            -auto-approve \
+            -lock=false
+
+      - name: Terraform Plan
+        # Executa apenas se o input 'destroy' for 'false'
+        if: inputs.destroy == false
+        id: terraform-plan
+        run: |
+          cd ${{ inputs.terraform-dir }} && \
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} && \
+          terraform plan \
+            -var="environment=${{ inputs.environment }}" \
+            -var-file="./envs/${{ inputs.environment }}/terraform.tfvars" \
+            -out="${{ inputs.environment }}.plan" \
+            -lock=false
+
+      - name: Terraform Apply
+        # Executa apenas se o input 'destroy' for 'false'
+        if: inputs.destroy == false
+        id: terraform-apply
+        run: |
+          cd ${{ inputs.terraform-dir }} && \
+          terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} && \
+          terraform apply \
+            -lock=false \
+            "${{ inputs.environment }}.plan"

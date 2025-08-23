@@ -1,0 +1,44 @@
+name: Auto PR de Feature para Develop
+
+on:
+  push:
+    branches:
+      - 'feature/**'
+
+jobs:
+  create-pr:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Criar Pull Request
+        id: create-pr
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const branchName = process.env.GITHUB_REF.replace('refs/heads/', '');
+            const pullRequests = await github.rest.pulls.list({
+              owner,
+              repo,
+              head: branchName,
+              base: 'develop',
+            });
+
+            if (pullRequests.data.length === 0) {
+              const newPullRequest = await github.rest.pulls.create({
+                owner,
+                repo,
+                head: branchName,
+                base: 'develop',
+                title: `feat: Nova feature - ${branchName.replace('feature/', '')}`,
+                body: 'Este Pull Request foi criado automaticamente para integrar a nova feature à branch de desenvolvimento.',
+              });
+              console.log(`Pull Request criado: ${newPullRequest.data.html_url}`);
+            } else {
+              console.log('Já existe um Pull Request para esta branch. Nenhum novo foi criado.');
+            }
