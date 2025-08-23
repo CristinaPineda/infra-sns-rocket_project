@@ -85,7 +85,7 @@ jobs:
           terraform workspace select -or-create ${{ inputs.environment }} && \
           terraform plan \
             -var="environment=${{ inputs.environment }}" \
-            -var-file="envs/${{ inputs.environment }}/terraform.tfvars" \ 
+            -var-file="envs/${{ inputs.environment }}/terraform.tfvars" \
             -out="${{ inputs.environment }}.plan" \
             -lock=false
 
@@ -94,7 +94,7 @@ jobs:
         id: terraform-apply
         run: |
           cd infra && \
-          terraform workspace select -or-create ${{ inputs.environment }} && \ 
-          terraform apply \
+          terraform workspace select -or-create ${{ inputs.environment }} && \
+          terraform apply -auto-approve \ 
             -lock=false \
             "${{ inputs.environment }}.plan"
