@@ -67,9 +67,12 @@ jobs:
           terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} && \
           terraform destroy \
             -var="environment=${{ inputs.environment }}" \
-            -var-file="./envs/${{ inputs.environment }}/terraform.tfvars" \
+            -var-file="envs/${{ inputs.environment }}/terraform.tfvars" \
             -auto-approve \
             -lock=false
+
+      - name: Debug - Listar arquivos na pasta infra
+        run: ls -R infra       
 
       - name: Terraform Plan
         if: steps.read-destroy-config.outputs.destroy != 'true'
@@ -79,7 +82,7 @@ jobs:
           terraform workspace select ${{ inputs.environment }} || terraform workspace new ${{ inputs.environment }} && \
           terraform plan \
             -var="environment=${{ inputs.environment }}" \
-            -var-file="./envs/${{ inputs.environment }}/terraform.tfvars" \
+            -var-file="envs/${{ inputs.environment }}/terraform.tfvars" \
             -out="${{ inputs.environment }}.plan" \
             -lock=false
 

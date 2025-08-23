@@ -1,9 +1,9 @@
-name: "PROD deploy"
+name: "DEV deploy"
 
 on: 
   push:
     branches:
-      - main
+      - develop
 
 permissions:
   id-token: write
@@ -13,8 +13,8 @@ jobs:
   terraform:
     uses: ./.github/workflows/terraform.yml
     with:
-      environment: prod
+      environment: dev
       aws-assume-role-arn: "arn:aws:iam::063630845645:role/github-actions-pipeline-infra"
       aws-region: "sa-east-1"
       aws-statefile-s3-bucket: "rocket-project-statefiles"
-      aws-lock-dynamodb-table: "rocket-project-terraform-lock"
+      aws-lock-dynamodb-table: "rocket-projec-terraform-lock"
