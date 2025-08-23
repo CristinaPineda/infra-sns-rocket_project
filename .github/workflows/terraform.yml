@@ -6,6 +6,10 @@ on:
       environment:
         type: string
         required: true
+
+      project_name:
+        type: string
+        required: true
       aws-assume-role-arn:
         type: string
         required: true
@@ -74,6 +78,16 @@ jobs:
       - name: Debug - Listar arquivos na pasta infra
         run: ls -R infra       
 
+      - name: Importar CloudWatch Log Group
+        run: |
+          cd infra
+          terraform import aws_cloudwatch_log_group.sns_delivery_logs /aws/sns/deliveries/${{ inputs.environment }}-sns-topic || true
+
+      - name: Importar IAM Role
+        run: |
+          cd infra
+          terraform import aws_iam_role.sns_logging_role ${{ inputs.project_name }}-${{ inputs.environment }}-sns-logging-role || true
+
       - name: Terraform Plan
         if: steps.read-destroy-config.outputs.destroy != 'true'
         id: terraform-plan
@@ -85,6 +99,7 @@ jobs:
             -var-file="envs/${{ inputs.environment }}/terraform.tfvars" \
             -out="${{ inputs.environment }}.plan" \
             -lock=false
+
 
       - name: Terraform Apply
         if: steps.read-destroy-config.outputs.destroy != 'true'
