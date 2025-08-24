@@ -6,9 +6,6 @@ on:
       environment:
         type: string
         required: true
-      project_name:
-        type: string
-        required: true
       aws-assume-role-arn:
         type: string
         required: true
@@ -58,7 +55,6 @@ jobs:
           cd infra && \
           terraform init \
             -backend-config="bucket=${{ inputs.aws-statefile-s3-bucket }}" \
-            -backend-config="key=${{ inputs.project_name }}/${{ inputs.environment }}/terraform.tfstate" \
             -backend-config="region=${{ inputs.aws-region }}" \
             -backend-config="dynamodb_table=${{ inputs.aws-lock-dynamodb-table }}"
 

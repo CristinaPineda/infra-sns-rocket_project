@@ -1,4 +1,4 @@
-name: Auto PR de Develop para Master
+name: "[DEVELOP TO MASTER] PR aberto automaticamente"
 
 on:
   push:
