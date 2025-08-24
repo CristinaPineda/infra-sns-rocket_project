@@ -1,4 +1,4 @@
-name: Auto PR de Develop para Master
+name: "[DEVELOP TO MASTER] PR aberto automaticamente"
 
 on:
   push:
@@ -35,7 +35,7 @@ jobs:
                 repo,
                 head: 'develop',
                 base: 'master',
-                title: 'chore: Integrar mudanças da branch develop',
+                title: '[DEVELOP TO MASTER] PR aberto automaticamente',
                 body: 'Este Pull Request foi criado automaticamente para integrar as mudanças de develop para master.'
               });
               console.log(`Pull Request para master criado: ${newPullRequest.data.html_url}`);

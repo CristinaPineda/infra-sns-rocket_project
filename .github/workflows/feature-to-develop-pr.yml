@@ -1,4 +1,4 @@
-name: Auto PR de Feature para Develop
+name: "[FEATURE TO DEVELOP] PR aberto automaticamente"
 
 on:
   push:
@@ -35,8 +35,8 @@ jobs:
                 repo,
                 head: branchName,
                 base: 'develop',
-                title: `feat: Nova feature - ${branchName.replace('feature/', '')}`,
-                body: 'Este Pull Request foi criado automaticamente para integrar a nova feature à branch de desenvolvimento.',
+                title: `[FEATURE TO DEVELOP] PR aberto automaticamente - ${branchName.replace('feature/', '')}`,
+                body: 'Este Pull Request foi criado automaticamente para integrar a nova branch feature à branch de desenvolvimento.',
               });
               console.log(`Pull Request criado: ${newPullRequest.data.html_url}`);
             } else {
