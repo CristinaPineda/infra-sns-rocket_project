@@ -6,6 +6,9 @@ on:
       environment:
         type: string
         required: true
+      project_name:
+        type: string
+        required: true
       aws-assume-role-arn:
         type: string
         required: true
