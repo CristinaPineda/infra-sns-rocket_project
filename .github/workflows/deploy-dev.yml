@@ -18,4 +18,4 @@ jobs:
       aws-assume-role-arn: "arn:aws:iam::063630845645:role/github-actions-pipeline-infra"
       aws-region: "sa-east-1"
       aws-statefile-s3-bucket: "rocket-project-statefiles"
-      aws-lock-dynamodb-table: "rocket-projec-terraform-lock"
+      aws-lock-dynamodb-table: "rocket-project-terraform-lock"
