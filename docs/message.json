@@ -1,0 +1,26 @@
+{
+  "Message": "{\"query_id\":\"ab8190c1-2f73-455b-b9f4-18751e06c7e3\",\"ano\":\"2025\",\"mes\":\"08\",\"dia\":\"28\",\"tabela_origem\":\"sot_portos\"}",
+  "TopicArn": "arn:aws:sns:sa-east-1:123456789012:rocket-project-dev-sns-topic",
+  "MessageAttributes": {
+    "ano": {
+      "DataType": "String",
+      "StringValue": "2025"
+    },
+    "mes": {
+      "DataType": "String",
+      "StringValue": "08"
+    },
+    "dia": {
+      "DataType": "String",
+      "StringValue": "28"
+    },
+    "tabela_origem": {
+      "DataType": "String",
+      "StringValue": "sot_portos"
+    },
+    "correlation_id": {
+      "DataType": "String",
+      "StringValue": "ab8190c1-2f73-455b-b9f4-18751e06c7e3"
+    }
+  }
+}
