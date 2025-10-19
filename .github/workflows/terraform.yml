@@ -112,19 +112,19 @@ jobs:
           # 2. Configura a mesma Role para logs de SUCESSO via SQS
           aws sns set-topic-attributes \
             --topic-arn "$SNS_TOPIC_ARN" \
-            --attribute-name **SQSSuccessFeedbackRoleArn** \
+            --attribute-name SQSSuccessFeedbackRoleArn \
             --attribute-value "$LOG_ROLE_ARN"
 
           # 3. Define a taxa de amostragem de SUCESSO para 100%
           aws sns set-topic-attributes \
             --topic-arn "$SNS_TOPIC_ARN" \
-            --attribute-name **SQSSuccessFeedbackSampleRate** \
+            --attribute-name SQSSuccessFeedbackSampleRate \
             --attribute-value "100"
             
           # 4. Configura a mesma Role para logs de FALHA via SQS
           aws sns set-topic-attributes \
             --topic-arn "$SNS_TOPIC_ARN" \
-            --attribute-name **SQSFailureFeedbackRoleArn** \
+            --attribute-name SQSFailureFeedbackRoleArn \
             --attribute-value "$LOG_ROLE_ARN"
             
           echo "Configuração de logs concluída com sucesso."
