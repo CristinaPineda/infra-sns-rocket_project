@@ -8,21 +8,41 @@ resource "aws_sns_topic" "rocket_project_sns_topic" {
   }
 }
 
-# --------------------------------------------------------------------------
-# NOVO RECURSO: Configuração de Logging do Tópico
-# Este recurso é OBRIGATÓRIO para configurar o Delivery Status Logging.
-# --------------------------------------------------------------------------
-resource "aws_sns_topic_logging" "rocket_project_sns_logging" {
-  # O ARN do Tópico SNS ao qual aplicamos as regras
-  topic_arn = aws_sns_topic.rocket_project_sns_topic.arn
+# Recurso 1: IAM Role que o SNS assumirá
+resource "aws_iam_role" "sns_delivery_logging_role" {
+  name = "sns-delivery-logging-role-${var.environment}"
 
-  # O Protocolo que queremos monitorar (O seu destino é o SQS)
-  protocol = "sqs"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "sns.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
 
-  # Configuração de SUCCESSO
-  success_feedback_role_arn     = aws_iam_role.sns_delivery_logging_role.arn
-  success_feedback_sample_rate  = 100 # 100% de amostragem
+# Recurso 2: IAM Policy que permite o SNS escrever no CloudWatch Logs
+resource "aws_iam_role_policy" "sns_delivery_logging_policy" {
+  name = "sns-delivery-logging-policy"
+  role = aws_iam_role.sns_delivery_logging_role.id
 
-  # Configuração de FALHA
-  failure_feedback_role_arn     = aws_iam_role.sns_delivery_logging_role.arn
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ],
+        Resource = "arn:aws:logs:*:*:log-group:/aws/sns/*"
+      }
+    ]
+  })
 }

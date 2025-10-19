@@ -7,3 +7,7 @@ output "sns_topic_name" {
   description = "The name of the SNS topic."
   value       = aws_sns_topic.rocket_project_sns_topic.name
 }
+
+output "sns_logging_role_arn" {
+  value = aws_iam_role.sns_delivery_logging_role.arn
+}
