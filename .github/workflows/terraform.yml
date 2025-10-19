@@ -21,10 +21,6 @@ on:
       aws-lock-dynamodb-table:
         type: string
         required: true
-      sns-logging-role-arn: # NOVO INPUT
-              type: string
-              required: true
-              description: "ARN da IAM Role única para logs de sucesso e falha do SNS."
       destroy:
         type: boolean
         required: false
