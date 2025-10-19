@@ -21,14 +21,10 @@ on:
       aws-lock-dynamodb-table:
         type: string
         required: true
-      sns-success-log-role-arn:
-        type: string
-        required: true
-        description: "ARN da IAM Role para logs de sucesso do SNS."
-      sns-failure-log-role-arn:
-        type: string
-        required: true
-        description: "ARN da IAM Role para logs de falha do SNS."
+      sns-logging-role-arn: # NOVO INPUT
+              type: string
+              required: true
+              description: "ARN da IAM Role única para logs de sucesso e falha do SNS."
       destroy:
         type: boolean
         required: false
@@ -106,34 +102,33 @@ jobs:
             -lock=false \
             "${{ inputs.environment }}.plan"
 
-      - name: Configure SNS Delivery Logging
+      - name: Configure SNS SQS Delivery Logging
+              # Garante que só roda se o apply foi um sucesso e não é um destroy
         if: inputs.destroy == false && steps.terraform-apply.outcome == 'success'
         run: |
           cd infra
-          # 1. Obter o ARN do Tópico SNS via output do Terraform
-          SNS_TOPIC_ARN=$(terraform output -raw sns_topic_arn) 
+          # 1. Obtém os ARNs do Terraform (seus outputs)
+          SNS_TOPIC_ARN=$(terraform output -raw sns_topic_arn)
+          LOG_ROLE_ARN=$(terraform output -raw sns_logging_role_arn)
           
-          # Variáveis do Workflow
-          SUCCESS_ROLE_ARN="${{ inputs.sns-success-log-role-arn }}"
-          FAILURE_ROLE_ARN="${{ inputs.sns-failure-log-role-arn }}"
-          
-          echo "Configurando Delivery Logging para SQS no Tópico: $SNS_TOPIC_ARN"
+          echo "Configurando logs SQS no Tópico: $SNS_TOPIC_ARN"
 
-          # Habilita o log de SUCESSO e define 100% de amostragem
+          # 2. Configura a mesma Role para logs de SUCESSO via SQS
           aws sns set-topic-attributes \
             --topic-arn "$SNS_TOPIC_ARN" \
             --attribute-name **SQSSuccessFeedbackRoleArn** \
-            --attribute-value "$SUCCESS_ROLE_ARN"
+            --attribute-value "$LOG_ROLE_ARN"
 
+          # 3. Define a taxa de amostragem de SUCESSO para 100%
           aws sns set-topic-attributes \
             --topic-arn "$SNS_TOPIC_ARN" \
             --attribute-name **SQSSuccessFeedbackSampleRate** \
             --attribute-value "100"
             
-          # Habilita o log de FALHA
+          # 4. Configura a mesma Role para logs de FALHA via SQS
           aws sns set-topic-attributes \
             --topic-arn "$SNS_TOPIC_ARN" \
             --attribute-name **SQSFailureFeedbackRoleArn** \
-            --attribute-value "$FAILURE_ROLE_ARN"
+            --attribute-value "$LOG_ROLE_ARN"
             
-          echo "Configuração de logs concluída."
+          echo "Configuração de logs concluída com sucesso."
