@@ -21,6 +21,14 @@ on:
       aws-lock-dynamodb-table:
         type: string
         required: true
+      sns-success-log-role-arn:
+        type: string
+        required: true
+        description: "ARN da IAM Role para logs de sucesso do SNS."
+      sns-failure-log-role-arn:
+        type: string
+        required: true
+        description: "ARN da IAM Role para logs de falha do SNS."
       destroy:
         type: boolean
         required: false
@@ -97,3 +105,35 @@ jobs:
           terraform apply \
             -lock=false \
             "${{ inputs.environment }}.plan"
+
+      - name: Configure SNS Delivery Logging
+        if: inputs.destroy == false && steps.terraform-apply.outcome == 'success'
+        run: |
+          cd infra
+          # 1. Obter o ARN do Tópico SNS via output do Terraform
+          SNS_TOPIC_ARN=$(terraform output -raw sns_topic_arn) 
+          
+          # Variáveis do Workflow
+          SUCCESS_ROLE_ARN="${{ inputs.sns-success-log-role-arn }}"
+          FAILURE_ROLE_ARN="${{ inputs.sns-failure-log-role-arn }}"
+          
+          echo "Configurando Delivery Logging para SQS no Tópico: $SNS_TOPIC_ARN"
+
+          # Habilita o log de SUCESSO e define 100% de amostragem
+          aws sns set-topic-attributes \
+            --topic-arn "$SNS_TOPIC_ARN" \
+            --attribute-name **SQSSuccessFeedbackRoleArn** \
+            --attribute-value "$SUCCESS_ROLE_ARN"
+
+          aws sns set-topic-attributes \
+            --topic-arn "$SNS_TOPIC_ARN" \
+            --attribute-name **SQSSuccessFeedbackSampleRate** \
+            --attribute-value "100"
+            
+          # Habilita o log de FALHA
+          aws sns set-topic-attributes \
+            --topic-arn "$SNS_TOPIC_ARN" \
+            --attribute-name **SQSFailureFeedbackRoleArn** \
+            --attribute-value "$FAILURE_ROLE_ARN"
+            
+          echo "Configuração de logs concluída."
