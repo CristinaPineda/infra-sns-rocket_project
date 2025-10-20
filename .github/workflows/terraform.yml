@@ -97,3 +97,4 @@ jobs:
           terraform apply \
             -lock=false \
             "${{ inputs.environment }}.plan"
+
