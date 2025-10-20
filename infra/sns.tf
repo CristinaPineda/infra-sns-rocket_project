@@ -19,6 +19,11 @@ resource "aws_sns_topic" "rocket_project_sns_topic" {
   # Define o ARN da Role para logs de FALHA para todos os protocolos
   application_failure_feedback_role_arn = aws_iam_role.sns_delivery_logging_role.arn
   sqs_failure_feedback_role_arn         = aws_iam_role.sns_delivery_logging_role.arn
+
+  depends_on = [
+    aws_iam_role.sns_delivery_logging_role,
+    aws_iam_role_policy.sns_delivery_logging_policy
+  ]
 }
 
 # Recurso 1: IAM Role que o SNS assumirá
